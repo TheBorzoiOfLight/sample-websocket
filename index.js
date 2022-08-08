@@ -1,33 +1,27 @@
 'use strict';
+var app = require('express')();
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
 
-const express = require('express');
-const path = require('path');
-const { createServer } = require('http');
-
-const WebSocket = require('ws');
-
-const app = express();
-app.use(express.static(path.join(__dirname, '/public')));
-
-const server = createServer(app);
-const wss = new WebSocket.Server({ server });
-
-wss.on('connection', function (ws) {
-    const id = setInterval(function () {
-        ws.send(JSON.stringify(process.memoryUsage()), function () {
-            //
-            // Ignoring errors.
-            //
-        });
-    }, 100);
-    console.log('started client interval');
-
-    ws.on('close', function () {
-        console.log('stopping client interval');
-        clearInterval(id);
-    });
+app.get('/', function(req, res){
+   res.sendFile('E:/test/index.html');});
+users = [];
+io.on('connection', function(socket){
+   console.log('A user connected');
+   socket.on('setUsername', function(data){
+      console.log(data);
+      if(users.indexOf(data) > -1){
+         socket.emit('userExists', data + ' username is taken! Try some other username.');
+      } else {
+         users.push(data);
+         socket.emit('userSet', {username: data});
+      }
+   });
+   socket.on('msg', function(data){
+      //Send message to everyone
+      io.sockets.emit('newmsg', data);
+   })
 });
-
-server.listen(8080, function () {
-    console.log('Listening on http://0.0.0.0:8080');
+http.listen(3000, function(){
+   console.log('listening on localhost:3000');
 });
